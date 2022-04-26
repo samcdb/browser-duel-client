@@ -1,25 +1,65 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { useState, useEffect } from 'react';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import './App.css';
 
-function App() {
+const App: React.FC = () => {
+    // sets a client message, sent from the server
+  const [clientMessage, setClientMessage] = useState<string | null>(null);
+  const [ connection, setConnection ] = useState<HubConnection | null>(null);
+
+  // starts the SignalR connection
+  // only run on first render
+  useEffect(() => {
+      console.log("Set up connection");
+      const newConnection : HubConnection = new HubConnectionBuilder()
+          .withUrl("http://localhost:5084/chatHub")
+          .withAutomaticReconnect()
+          .build();
+
+      setConnection(newConnection);
+  }, []);
+
+  //
+  useEffect(() => {
+    
+    if (connection) {
+      connection.start()
+          .then(result => {
+              console.log('Connected!');
+
+              connection.on('Message', message => {
+                setClientMessage(message);
+              });
+          })
+          .catch(e => console.log('Connection failed: ', e));
+    }
+  }, [connection]);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      <p>{clientMessage}</p>
+      <TestButton clickHandler={async () => 
+        {
+          console.log("Sending");
+          await connection?.send('SendMessage', '-left-');
+          console.log("Done");
+        }}/>
+      <TestButton clickHandler={async () => 
+        {
+          console.log("Sending");
+          await connection?.send('SendMessage', '-right-');
+          console.log("Done");
+        }}/>
+    </>);
+}
+
+interface TestButtonProps{
+  clickHandler() : void;
+}
+
+const TestButton : React.FC<TestButtonProps> = (props : TestButtonProps) => {
+  return (
+    <button onClick={props.clickHandler}></button>
   );
 }
 
