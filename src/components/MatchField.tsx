@@ -1,74 +1,82 @@
 import styled from 'styled-components';
-import React, { useState, useEffect, createContext } from 'react';
-import MatchConnectionInterface from '../interfaces/MatchConnectionInterface';
-import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-
-const CourtOutline = styled.div`
-    width: 75%;
-    height: 90vh;
-    margin: 0 auto;
-    border: 5px solid black;
-`; 
-const ActiveArea = styled.div`
-    border: 2px dashed black;
-    position: relative;
-    height: 70vh;
-    top: 50%;
-    -webkit-transform: translateY(-50%);
-    -ms-transform: translateY(-50%);
-    transform: translateY(-50%);
-`;
-const MatchWrapper = styled.div``;
+import React, { useState, useEffect } from 'react';
+import MatchConnection from '../interfaces/MatchConnection';
+import { HubConnection } from '@microsoft/signalr';
+import ActiveArea from './ActiveArea';
+import CurrentGameInfo from '../interfaces/CurrentGameInfo';
+import ReactionClickGameInfo from '../interfaces/games/ReactionClickGameInfo';
+import GameType from '../enums/GameType'; 
 
 interface PlayFieldProps {
     hubConnection: HubConnection
 }
 
-interface ReactionClickGameInterface {
+interface MatchFoundDto {
+    id: string;
+    enemyName: string;
+}
+
+// seems a bit pointless for now as it's identical to ReactionClickGameInfo
+// but I want a border between network transfer and the client
+interface ReactionClickGameDto {
     timeUntilScreen: number;
 }
 
-
-const PlayField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) => {
-    const [matchConnection, setMatchConnection] = useState<MatchConnectionInterface | null>(null);
-    const [enemyName, setEnemyName] = useState<string>();
-
+const MatchField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) => {
+    const [matchConnection, setMatchConnection] = useState<MatchConnection | null>(null);
+    const [enemyName, setEnemyName] = useState<string>("");
     // games
-    const [reactionClickGame, setReactionClickGame] = useState<ReactionClickGameInterface | null>();
+    const [currentGameInfo, setCurrentGameInfo] = useState<CurrentGameInfo>({});
 
-    hubConnection.on('matchFound', ({id, enemyName}) => {
-        const newMatchConnection: MatchConnectionInterface = {
-          matchId: id,
-          connection: hubConnection,
+    useEffect(() => {
+        const matchFoundCallback = ({id, enemyName}: MatchFoundDto) => {
+            const newMatchConnection: MatchConnection = {
+              matchId: id,
+              connection: hubConnection,
+            };
+            
+            setMatchConnection(newMatchConnection);
+            setEnemyName(enemyName);
+    
+            hubConnection.send('playerReady', id);
+        }
+        hubConnection.on('matchFound', matchFoundCallback);
+    
+        // on a game start -> useEffect where all other games are set to null
+        // pass all games to child component
+        const startReactionClickGameCallback = ({ timeUntilScreen }: ReactionClickGameDto) => {
+            console.log(timeUntilScreen)
+            const reactionClickGame: ReactionClickGameInfo = { timeUntilScreen };
+            const currentGame: GameType = GameType.ReactionClick;
+    
+            setCurrentGameInfo({currentGame, reactionClickGame});
         };
-        
-        setMatchConnection(newMatchConnection);
-        setEnemyName(enemyName);
+        hubConnection.on('startReactionClickGame', startReactionClickGameCallback);
 
-        hubConnection.send('playerReady', id);
-    });
-
-    // on a game start -> useEffect where all other games are set to null
-    // pass all games to child component
-    hubConnection.on('startReactionClickGame', ({ timeUntilScreen }: ReactionClickGameInterface) => {
-        console.log(timeUntilScreen)
-        const newReactionClickGame: ReactionClickGameInterface = { timeUntilScreen };
-        setReactionClickGame(newReactionClickGame);
-        });
+        return () => {
+            hubConnection.off('matchFound', matchFoundCallback);
+            hubConnection.off('startReactionClickGame', startReactionClickGameCallback);
+        }
+    }, []);
 
     return (
         <MatchWrapper>
             {enemyName}
             { matchConnection == null ? "In queue..." :
             <CourtOutline>
-                {reactionClickGame?.timeUntilScreen}
-                <ActiveArea >
-
-                </ActiveArea>
+                <ActiveArea matchConnection={matchConnection} gameInfo={currentGameInfo}/>
             </CourtOutline>
             }
         </MatchWrapper>
     );
 }
 
-export default PlayField;
+const MatchWrapper = styled.div``;
+const CourtOutline = styled.div`
+    width: 75%;
+    height: 90vh;
+    margin: 0 auto;
+    border: 5px solid black;
+`;
+
+export default MatchField;

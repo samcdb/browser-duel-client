@@ -1,13 +1,13 @@
 import React, { useState, useEffect, createContext } from 'react';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import MatchField from './MatchField';
-import MatchConnectionInterface from '../interfaces/MatchConnectionInterface';
 
 //const MatchConnectionContext = createContext<MatchConnectionInterface | null>(null);
 
 const Match: React.FC = () => {
     //const [ connection, setConnection ] = useState<HubConnection | null>(null);
 
+    // don't need to unsubscribe these yet - match only renders once per match
     console.log("Set up connection");
     const newConnection: HubConnection = new HubConnectionBuilder()
         .withUrl("http://localhost:5084/matchHub")
@@ -16,7 +16,6 @@ const Match: React.FC = () => {
 
     newConnection.start();
     newConnection.on('connected', (message) => {
-        console.log(message)
         newConnection?.send('addToQueue', '6b3a81a4-05a4-44ed-bc97-a71802690bb8');
         });
     
