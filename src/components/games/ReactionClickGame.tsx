@@ -16,7 +16,7 @@ interface ReactionClickGameUpdate {
 }
 
 interface ReacionClickGameResult {
-    won: boolean;
+    won: boolean | null;
 }
 
 // screen is inactive (grey) on start up
@@ -42,9 +42,9 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
             console.log(`received result ${won}`);
             setWon(won);
         };
-        connection.on('reactionClickGameResult', resultCallback);
+        connection.on('updateReactionClickGame', resultCallback);
 
-        return connection.off('reactionClickGameResult', resultCallback);
+        return () => connection.off('updateReactionClickGame', resultCallback);
     }, []);
 
     // set time until screen activates - only happens once
@@ -59,14 +59,17 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
     }, [gameInfo.timeUntilScreen]);
 
     const handleClick = async (): Promise<void> => {
+        if (clicked)
+            return;
+        
         setClicked(true);
         clearTimeout(activationTimeout.current as  NodeJS.Timeout);
         timeTaken.current = Date.now() - startTime.current;
 
         try {
             console.log('player clicked');
-            const update: ReactionClickGameUpdate = { timeTaken: timeTaken.current, matchId };
-            await connection.send('reactionClickGameUpdate', update);
+            const update: ReactionClickGameUpdate = { matchId, timeTaken: timeTaken.current };
+            await connection.send('reactionClickAction', update);
             console.log('successfully sent click');
         }
         catch (error) {
@@ -80,7 +83,9 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
     const colour: string = chooseColour(won, clicked, active);
     console.log(colour);
     return (
-        <ReactionScreen colour={colour} onClick={handleClick} />
+        <ReactionScreen colour={colour} onClick={handleClick}>
+            
+        </ReactionScreen>
     );
 }
 
