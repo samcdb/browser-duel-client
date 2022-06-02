@@ -2,8 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import MatchConnection from '../../interfaces/MatchConnection';
 import ReactionClickGameInfo from '../../interfaces/games/ReactionClickGameInfo';
 import styled from 'styled-components';
-import { match } from 'assert';
-
 
 interface ReactionClickGameProps {
     matchConnection: MatchConnection;
@@ -15,7 +13,7 @@ interface ReactionClickGameUpdate {
     timeTaken: number;
 }
 
-interface ReacionClickGameResult {
+interface ReactionClickGameResult {
     won: boolean | null;
 }
 
@@ -38,7 +36,7 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
 
     // subscribe and unsubscribe from connection events
     useEffect(() => {
-        const resultCallback = ({won}: ReacionClickGameResult): void => {
+        const resultCallback = async ({won}: ReactionClickGameResult): Promise<void> => {
             console.log(`received result ${won}`);
             setWon(won);
         };
@@ -46,6 +44,19 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
 
         return () => connection.off('updateReactionClickGame', resultCallback);
     }, []);
+
+    // send ready message when game has concluded
+    useEffect(() => {
+        // give players time to see game result
+        if (won == null) {
+            return;
+        }
+        
+        setTimeout(() => {
+            console.log('ready for next game');
+            connection.send('playerReady', matchId);
+        }, 2000);
+    }, [won]);
 
     // set time until screen activates - only happens once
     useEffect(() => {
@@ -83,9 +94,7 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
     const colour: string = chooseColour(won, clicked, active);
     console.log(colour);
     return (
-        <ReactionScreen colour={colour} onClick={handleClick}>
-            
-        </ReactionScreen>
+        <ReactionScreen colour={colour} onClick={handleClick}/>
     );
 }
 
