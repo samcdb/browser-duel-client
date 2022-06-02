@@ -1,4 +1,5 @@
 import ReactionClickGameInfo from './games/ReactionClickGameInfo';
+import { AimGameInfo } from './games/AimGameInfo';
 import GameType from '../enums/GameType';
 
 interface CurrentGameInfo {
@@ -6,6 +7,7 @@ interface CurrentGameInfo {
     // adding enum field just saves time isntead of having to do null checks
     currentGame?: GameType;
     reactionClickGame?: ReactionClickGameInfo;
+    aimGame?:AimGameInfo;
 }
 
 export default CurrentGameInfo;

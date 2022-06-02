@@ -4,6 +4,7 @@ import MatchConnection from '../interfaces/MatchConnection';
 import CurrentGameInfo from '../interfaces/CurrentGameInfo';
 import GameType from '../enums/GameType';
 import ReactionClickGame from './games/ReactionClickGame';
+import AimGame from './games/AimGame';
 
 // at the moment all are null except for current game - might need to think of something cleaner
 interface ActiveAreaProps {
@@ -17,7 +18,11 @@ const ActiveArea: React.FC<ActiveAreaProps> = ({matchConnection, gameInfo}: Acti
     const renderGame = (gameInfo: CurrentGameInfo): JSX.Element => {
         switch (gameInfo.currentGame) {
             case GameType.ReactionClick:
-                return <ReactionClickGame matchConnection={matchConnection} gameInfo={gameInfo.reactionClickGame!}></ReactionClickGame>;
+                return <ReactionClickGame matchConnection={matchConnection} gameInfo={gameInfo.reactionClickGame!}/>;
+
+            case GameType.Aim:
+                return <AimGame matchConnection={matchConnection} gameInfo={gameInfo.aimGame!}/>;
+            
             default:
                 return <>Waiting for game</>
         }

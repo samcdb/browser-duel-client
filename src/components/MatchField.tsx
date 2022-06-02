@@ -6,6 +6,7 @@ import ActiveArea from './ActiveArea';
 import CurrentGameInfo from '../interfaces/CurrentGameInfo';
 import ReactionClickGameInfo from '../interfaces/games/ReactionClickGameInfo';
 import GameType from '../enums/GameType'; 
+import { AimGameInfo } from '../interfaces/games/AimGameInfo';
 
 interface PlayFieldProps {
     hubConnection: HubConnection
@@ -18,8 +19,21 @@ interface MatchFoundDto {
 
 // seems a bit pointless for now as it's identical to ReactionClickGameInfo
 // but I want a border between network transfer and the client
+// reaction click
 interface ReactionClickGameDto {
     timeUntilScreen: number;
+}
+
+// aim
+interface AimTokenDto {
+    x: number;
+    y: number;
+    attack: boolean;
+} 
+
+interface AimGameDto {
+    turns: AimTokenDto[];
+    timeBetweenTurns: number;
 }
 
 const MatchField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) => {
@@ -28,6 +42,7 @@ const MatchField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) =
     // games
     const [currentGameInfo, setCurrentGameInfo] = useState<CurrentGameInfo>({});
 
+    // set up game rendering functions to be called on receiving socket messages
     useEffect(() => {
         const matchFoundCallback = ({id, enemyName}: MatchFoundDto) => {
             const newMatchConnection: MatchConnection = {
@@ -39,7 +54,7 @@ const MatchField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) =
             setEnemyName(enemyName);
     
             hubConnection.send('playerReady', id);
-        }
+        };
         hubConnection.on('matchFound', matchFoundCallback);
     
         // on a game start -> useEffect where all other games are set to null
@@ -53,9 +68,19 @@ const MatchField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) =
         };
         hubConnection.on('startReactionClickGame', startReactionClickGameCallback);
 
+        const startAimGameCallback = ({ turns, timeBetweenTurns }: AimGameDto) => {
+            console.log(turns)
+            const aimGame: AimGameInfo = { turns, timeBetweenTurns };
+            const currentGame: GameType = GameType.Aim;
+    
+            setCurrentGameInfo({currentGame, aimGame});
+        };
+        hubConnection.on('startAimGame', startAimGameCallback);
+
         return () => {
             hubConnection.off('matchFound', matchFoundCallback);
             hubConnection.off('startReactionClickGame', startReactionClickGameCallback);
+            hubConnection.off('startAimGame', startAimGameCallback);
         }
     }, []);
 
