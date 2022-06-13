@@ -105,7 +105,7 @@ interface StyleProps {
 
 const ReactionScreen = styled.div<StyleProps>`
     height: 100%;
-    ${(props => `background-color: ${props.colour};`)};
+    ${props => `background-color: ${props.colour};`};
 `;
 
 // helper functions
