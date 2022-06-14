@@ -3,6 +3,7 @@ import MatchConnection from '../../interfaces/MatchConnection';
 import { AimToken as AimTokenInfo } from '../../interfaces/games/AimGameInfo';
 import { FieldDimensions } from './AimGame';
 import AimToken from './AimToken';
+import styled from 'styled-components';
 
 interface AimTokenRendererProps {
     matchConnection: MatchConnection;
@@ -33,30 +34,33 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
     const turnCount = useRef<number>(0);
     // need ref of setInterval to cancel it
     const turnInterval = useRef<NodeJS.Timer | null>(null);
+
+    const savedCallback = useRef<() => void>();
+
+    // define a new callback for each render
+    savedCallback.current =  () => {
+        console.log(`interval ${turnCount.current}`);
+        const aimToken = turnArr.current[turnCount.current];
+        setAimToken(
+            { 
+                x: (aimToken.x / 100) * fieldDimensions.width!, // why is this considered possibly undefined?
+                y: (aimToken.y / 100) * fieldDimensions.height!,
+                attack: aimToken.attack
+            });
+        turnCount.current = turnCount.current++;
+    };
     
-    // setInterval using timeBetween, increment aim token index
     useEffect(() => {
-        // do nothing unless dimensions are obtained
-        if (fieldDimensions.height == null  || fieldDimensions.width == null) {
-            return;
+        const tick = () => {
+            savedCallback.current!();
         }
 
-        turnInterval.current = setInterval(() => {
-            // set up token
-            console.log(`interval ${turnCount.current}`);
-            const aimToken = turnArr.current[turnCount.current];
-            setAimToken(
-                { 
-                    x: (aimToken.x / 100) * fieldDimensions.width!, // why is this considered possibly undefined?
-                    y: (aimToken.y / 100) * fieldDimensions.height!,
-                    attack: aimToken.attack
-                });
-            turnCount.current = turnCount.current++;
-        }, timeBetweenTurns);
+        turnInterval.current = setInterval(tick, timeBetweenTurns);
     }, []);
 
     const { connection, matchId } = matchConnection;
     const timeOfRender: number = Date.now();
+
     const clickHandler = () => {
         const timeTaken = Date.now()- timeOfRender;
         const attack = aimToken?.attack;
@@ -66,8 +70,20 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
     };
 
     return (
-         aimToken == null ? <></> : <AimToken clickCallback={clickHandler} attack={aimToken.attack} x={aimToken.x} y={aimToken.y} /> 
+        <Wrapper>
+         {
+            aimToken == null ? <></> : 
+            <AimToken 
+                clickCallback={clickHandler} 
+                attack={aimToken.attack} 
+                x={aimToken.x} y={aimToken.y}/> 
+         }
+        </Wrapper>
     );
 }
+
+const Wrapper = styled.div`
+    height: 100%;
+`;
 
 export default AimTokenRenderer;

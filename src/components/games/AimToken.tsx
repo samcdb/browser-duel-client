@@ -31,8 +31,10 @@ interface TokenStyleProps {
 }
 
 const Token = styled.button<TokenStyleProps>`
+    width: 50px;
+    height: 50px;
     position: relative;
-    ${props => `left: ${props.x} px; right: ${props.y} px;`}
+    ${props => `left: ${props.x}px; top: ${props.y}px;`}
     border-radius: 50%;
     ${props => `background-color: ${props.attack ? 'green' : 'blue'}`}
 `;

@@ -15,7 +15,7 @@ export interface FieldDimensions {
 }
 
 const AimGame: React.FC<AimGameProps> = ({matchConnection, gameInfo}: AimGameProps) => {
-    const [fieldDimensions, setFieldDimensions] = useState<FieldDimensions>({});
+    const [fieldDimensions, setFieldDimensions] = useState<FieldDimensions | null>(null);
     const aimFieldRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -34,7 +34,14 @@ const AimGame: React.FC<AimGameProps> = ({matchConnection, gameInfo}: AimGamePro
     // if this was done by AimField then they'd both be re-rendered at awkward times
     return (
         <AimField ref={aimFieldRef}>
-            <AimTokenRenderer matchConnection={matchConnection} turns={turns} timeBetweenTurns={timeBetweenTurns} fieldDimensions={fieldDimensions}/>
+            {
+                fieldDimensions == null ? <></> :  
+                <AimTokenRenderer 
+                    matchConnection={matchConnection} 
+                    turns={turns} 
+                    timeBetweenTurns={timeBetweenTurns} 
+                    fieldDimensions={fieldDimensions}/>
+            }
         </AimField>
     );
 }
