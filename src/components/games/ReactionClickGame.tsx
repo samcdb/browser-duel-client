@@ -3,17 +3,17 @@ import MatchConnection from '../../interfaces/MatchConnection';
 import ReactionClickGameInfo from '../../interfaces/games/ReactionClickGameInfo';
 import styled from 'styled-components';
 
-interface ReactionClickGameProps {
+interface ReactionClickProps {
     matchConnection: MatchConnection;
     gameInfo: ReactionClickGameInfo;
 }
 
-interface ReactionClickGameUpdate {
+interface ReactionClickAction {
     matchId: string;
     timeTaken: number;
 }
 
-interface ReactionClickGameResult {
+interface ReactionClickResult {
     won: boolean | null;
 }
 
@@ -24,7 +24,7 @@ interface ReactionClickGameResult {
 // server processes results -> returns whether player won
 // if won -> green, lost -> red, tie? -> grey
 // states: inactive (grey), active (yellow), inactive&clicked = fail, active&clicked = yellow with border, success/won (green), tie (grey)
-const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, gameInfo}: ReactionClickGameProps) => {
+const ReactionClickGame: React.FC<ReactionClickProps> = ({matchConnection, gameInfo}: ReactionClickProps) => {
     const [active, setActive] = useState<boolean>(false); 
     const [clicked, setClicked] = useState<boolean>(false); 
     const [won, setWon] = useState<boolean | null>(null);
@@ -36,7 +36,7 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
 
     // subscribe and unsubscribe from connection events
     useEffect(() => {
-        const resultCallback = async ({won}: ReactionClickGameResult): Promise<void> => {
+        const resultCallback = async ({won}: ReactionClickResult): Promise<void> => {
             console.log(`received result ${won}`);
             setWon(won);
         };
@@ -79,7 +79,7 @@ const ReactionClickGame: React.FC<ReactionClickGameProps> = ({matchConnection, g
 
         try {
             console.log('player clicked');
-            const update: ReactionClickGameUpdate = { matchId, timeTaken: timeTaken.current };
+            const update: ReactionClickAction = { matchId, timeTaken: timeTaken.current };
             await connection.send('reactionClickAction', update);
             console.log('successfully sent click');
         }
