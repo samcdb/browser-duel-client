@@ -12,9 +12,9 @@ interface AimTokenRendererProps {
     fieldDimensions: FieldDimensions;
 }
 
-interface AimGameUpdate {
+interface AimGameAction {
     timeTaken: number;
-    attack?: boolean;
+    index: number;
     matchId: string;
 }
 
@@ -34,38 +34,45 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
     const turnCount = useRef<number>(0);
     // need ref of setInterval to cancel it
     const turnInterval = useRef<NodeJS.Timer | null>(null);
-
-    const savedCallback = useRef<() => void>();
-
-    // define a new callback for each render
-    savedCallback.current =  () => {
-        console.log(`interval ${turnCount.current}`);
-        const aimToken = turnArr.current[turnCount.current];
-        setAimToken(
-            { 
-                x: (aimToken.x / 100) * fieldDimensions.width!, // why is this considered possibly undefined?
-                y: (aimToken.y / 100) * fieldDimensions.height!,
-                attack: aimToken.attack
-            });
-        turnCount.current = turnCount.current++;
-    };
     
     useEffect(() => {
-        const tick = () => {
-            savedCallback.current!();
-        }
+        turnInterval.current = setInterval(() => {
+            // clear at start so that players have full amount of time to click during last interval
+            if (turnCount.current >= turnArr.current.length) {
+                // end of aim game
+                setTimeout(() => {
+                    console.log('ready for next game');
+                    connection.send('playerReady', matchId);
+                }, 2000);
 
-        turnInterval.current = setInterval(tick, timeBetweenTurns);
+                clearInterval(turnInterval.current!);
+                // don't want rest of function running - game is over
+                return;
+            } 
+
+            console.log(`interval ${turnCount.current}`);
+            const aimToken = turnArr.current[turnCount.current];
+            setAimToken(
+                { 
+                    x: (aimToken.x / 100) * fieldDimensions.width!, // why is this considered possibly undefined?
+                    y: (aimToken.y / 100) * fieldDimensions.height!,
+                    attack: aimToken.attack
+                });
+            turnCount.current++;  
+        }, timeBetweenTurns);
+
+        return () => clearInterval(turnInterval.current!); // precaution - interval should be cleared before this
     }, []);
-
+    
     const { connection, matchId } = matchConnection;
     const timeOfRender: number = Date.now();
 
-    const clickHandler = () => {
-        const timeTaken = Date.now()- timeOfRender;
-        const attack = aimToken?.attack;
-        const aimGameUpdate: AimGameUpdate = { matchId, timeTaken, attack };
-        connection.send('aimClickAction', aimGameUpdate);
+    const clickHandler = (clicked: boolean) => {
+        // if unclicked - assign max time
+        const timeTaken = clicked ? Date.now() - timeOfRender : timeBetweenTurns;
+        const index = turnCount.current;
+        const aimGameUpdate: AimGameAction = { matchId, timeTaken, index };
+        connection.send('aimAction', aimGameUpdate);
         console.log(`render click handler, time ${timeTaken}`);
     };
 
@@ -76,7 +83,9 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
             <AimToken 
                 clickCallback={clickHandler} 
                 attack={aimToken.attack} 
-                x={aimToken.x} y={aimToken.y}/> 
+                x={aimToken.x} y={aimToken.y}
+                index={turnCount.current}
+                /> 
          }
         </Wrapper>
     );
