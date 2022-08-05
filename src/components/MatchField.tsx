@@ -7,6 +7,7 @@ import CurrentGameInfo from '../interfaces/CurrentGameInfo';
 import ReactionClickGameInfo from '../interfaces/games/ReactionClickGameInfo';
 import GameType from '../enums/GameType'; 
 import { AimGameInfo } from '../interfaces/games/AimGameInfo';
+import { AimToken } from '../interfaces/games/AimGameInfo';
 
 interface PlayFieldProps {
     hubConnection: HubConnection
@@ -70,7 +71,15 @@ const MatchField: React.FC<PlayFieldProps> = ({hubConnection}: PlayFieldProps) =
 
         const startAimGameCallback = ({ turns, timeBetweenTurns }: AimGameDto) => {
             console.log(turns)
-            const aimGame: AimGameInfo = { turns, timeBetweenTurns };
+            const aimTokens: AimToken[] = turns.map<AimToken>(t => {    // woops need double curly brackets because I'm returning an object literal
+                return { 
+                    x: t.x,
+                    y: t.y,
+                    attack: t.attack,
+                    clicked: false
+                }
+            });
+            const aimGame: AimGameInfo = { turns: aimTokens, timeBetweenTurns };
             const currentGame: GameType = GameType.Aim;
     
             setCurrentGameInfo({currentGame, aimGame});

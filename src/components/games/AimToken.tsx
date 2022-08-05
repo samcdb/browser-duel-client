@@ -7,32 +7,37 @@ interface AimTokenProps {
     attack: boolean
     x: number;
     y: number;
-    index: number;
+    clicked: boolean;
 }
 
+// -EXPLANATION-
+// must re-render if it is clicked
+// every render must reset 'clicked'
+// essentially: every render caused by parent (passing in prop) must set clicked to false
+//      every render caused by clicking must set clicked to true
 
-const AimToken: React.FC<AimTokenProps> = ({ clickCallback, attack, x, y, index }) => {
-    const [clicked, setClicked] = useState<boolean>(false);
+//'How do we reset 'clicked' when component is rendered via a props change, but not when rendered by setting state 'clicked' to true and re-rendering the component?'
+// answer: instead we get clickCallback to set clicked state to true in parent component - causes a re-render via props - so all rendering is done by props change
+//      this means every automatic re-render from setInterval in parent will reset clicked to false, but a click action will set clicked to true
 
-    // if no click happens before unmounting - simulate a click
+const AimToken: React.FC<AimTokenProps> = ({ clickCallback, attack, x, y, clicked}) => {
+    // if no click happens before re-rendering then simulate a click - this should not trigger a re-render
     // this helps keep aim game flowing
-    useEffect(() => 
-        () => {
+    useEffect(() => () => {
             console.log("token cleanup");
             // clean up function simulates a click if unclicked
-            setClicked(false);
-            
+            console.log(clicked)
+
             if (!clicked) {
                 clickCallback(false);
             }
-    }, [index]);
+    });
 
     const clickHandler = () => {
         if (clicked) {
             return;
         }
         console.log("clicked token");
-        setClicked(true);
         clickCallback(true);
     }
 
