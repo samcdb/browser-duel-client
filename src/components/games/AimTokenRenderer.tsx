@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import MatchConnection from '../../interfaces/MatchConnection';
 import { AimToken as AimTokenInfo } from '../../interfaces/games/AimGameInfo';
 import { FieldDimensions } from './AimGame';
-import AimToken from './AimToken';
 import styled from 'styled-components';
 
 interface AimTokenRendererProps {
@@ -12,8 +11,8 @@ interface AimTokenRendererProps {
     fieldDimensions: FieldDimensions;
 }
 
-interface AimGameAction {
-    timeTaken: number;
+interface AimGameActionDto {
+    timeTaken: number | null;
     index: number;
     matchId: string;
 }
@@ -24,26 +23,39 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
     // keep track of index of current token
     const turnCount = useRef<number>(0);
     // need to keep track of info array for future renders
-    const turnArr = useRef<AimTokenInfo[]>(turns);
+    //const turnArr = useRef<AimTokenInfo[]>(turns);
     // need ref of setInterval to cancel it
     const turnInterval = useRef<NodeJS.Timer | null>(null);
     const [aimToken, setAimToken] = useState<AimTokenInfo>(turns[turnCount.current]); // set to 0 for initial render
 
     // this is called once - interval then repeatedly re-renders token
+
     useEffect(() => {
         turnInterval.current = setInterval(() => {
-            // move on to next token
-            turnCount.current++; 
+             
+            // TODO: aimtoken does not seem to update the way I think it does - expression is true even when clicked
+            if (!aimToken.clicked) { 
+                const index: number = turnCount.current;
+                const aimGameUpdate: AimGameActionDto = { matchId, index, timeTaken: null };
+                connection.send('aimAction', aimGameUpdate);
+            }
+
             // if we've run out of tokens - game is over
-            if (turnCount.current >= turnArr.current.length) {
+            // wait for server to give us next step
+            if (turnCount.current >= turns.length) {
                 // end of aim game
+                /*
                 console.log('ready for next game');
                 connection.send('playerReady', matchId);
+                */
+                connection.send('playerReady', matchId);
                 clearInterval(turnInterval.current!);
-
+                
                 return;
             } 
-            const currentAimToken = turnArr.current[turnCount.current]
+            // move on to next token
+            turnCount.current++; 
+            const currentAimToken = turns[turnCount.current]
 
             console.log(`interval ${turnCount.current}`);
 
@@ -64,25 +76,24 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
     const timeOfRender: number = Date.now();
 
     // callback invoked by the token when clicked or time has run out
-    const clickHandler = (clicked: boolean) => {
-        // if user clicked before time ran out - then re-render
-        // if user did not click and time has run out - do not setAimToken and cause a re-render - just let setInterval render the next token
-        // (otherwise we get two renders at almost the same time)
-        if (clicked) {
-            setAimToken(
-                { 
-                    // all fields except clicked are actually pointless
-                    x: (aimToken.x / 100) * fieldDimensions.width!, // why is this considered possibly undefined?
-                    y: (aimToken.y / 100) * fieldDimensions.height!,
-                    attack: aimToken.attack,
-                    clicked // set clicked to true and re-render token - this will be undone by setInterval callback
-                }
-            );
+    const clickHandler = () => {
+        if (aimToken.clicked) {
+            return;
         }
 
+        setAimToken(
+            { 
+                // all fields except clicked are actually pointless
+                x: (aimToken.x / 100) * fieldDimensions.width!, // why is this considered possibly undefined?
+                y: (aimToken.y / 100) * fieldDimensions.height!,
+                attack: aimToken.attack,
+                clicked: true // set clicked to true and re-render token - this will be undone by setInterval callback
+            }
+        );
+
         const index = turnCount.current;
-        const timeTaken = clicked ? Date.now() - timeOfRender : timeBetweenTurns;
-        const aimGameUpdate: AimGameAction = { matchId, timeTaken, index };
+        const timeTaken = Date.now() - timeOfRender;
+        const aimGameUpdate: AimGameActionDto = { matchId, timeTaken, index };
 
         connection.send('aimAction', aimGameUpdate);
         console.log(`render click handler, time ${timeTaken}`);
@@ -91,8 +102,8 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
     return (
         <Wrapper>
          { 
-            <AimToken 
-                clickCallback={clickHandler} 
+            <Token 
+                onClick={clickHandler} 
                 attack={aimToken.attack} 
                 x={aimToken.x} 
                 y={aimToken.y}
@@ -105,6 +116,23 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
 
 const Wrapper = styled.div`
     height: 100%;
+`;
+
+interface TokenStyleProps {
+    attack: boolean;
+    clicked: boolean;
+    x: number;
+    y: number;
+}
+
+const Token = styled.button<TokenStyleProps>`
+    width: 50px;
+    height: 50px;
+    position: relative;
+    ${props => props.clicked ? `display: none;` : ``}
+    ${props => `left: ${props.x}px; top: ${props.y}px;`}
+    border-radius: 50%;
+    ${props => `background-color: ${props.attack ? 'green' : 'blue'}`}
 `;
 
 export default AimTokenRenderer;
