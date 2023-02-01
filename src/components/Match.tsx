@@ -10,7 +10,7 @@ const Match: React.FC = () => {
     // don't need to unsubscribe these yet - match only renders once per match
     console.log("Set up connection");
     const newConnection: HubConnection = new HubConnectionBuilder()
-        .withUrl("http://localhost:5084/matchHub")
+        .withUrl("http://localhost:5000/matchHub")
         .withAutomaticReconnect()
         .build();
 
