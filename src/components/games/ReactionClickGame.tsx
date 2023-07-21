@@ -36,7 +36,7 @@ const ReactionClickGame: React.FC<ReactionClickProps> = ({matchConnection, gameI
 
     // subscribe and unsubscribe from connection events
     useEffect(() => {
-        const resultCallback = async ({won}: ReactionClickResult): Promise<void> => {
+        const resultCallback = ({won}: ReactionClickResult) => {
             console.log(`received result ${won}`);
             setWon(won);
         };
@@ -48,7 +48,7 @@ const ReactionClickGame: React.FC<ReactionClickProps> = ({matchConnection, gameI
     // send ready message when game has concluded
     useEffect(() => {
         // give players time to see game result
-        if (won == null) {
+        if (won === null) {
             return;
         }
         

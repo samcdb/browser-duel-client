@@ -13,7 +13,6 @@ interface AimTokenRendererProps {
 
 interface AimGameActionDto {
     timeTaken: number | null;
-    index: number;
     matchId: string;
 }
 
@@ -21,7 +20,10 @@ interface AimGameActionDto {
 // responsible for starting interval that renders AimTokens
 const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, turns, timeBetweenTurns, fieldDimensions }: AimTokenRendererProps) => {
     // keep track of index of current token
+    // include clicked bool here - can't rely on setAimToken to update clicked bool in time
     const turnCount = useRef<number>(0);
+    // need something that updates instantly - setState is too slow
+    const clicked = useRef<boolean>(false)
     // need to keep track of info array for future renders
     //const turnArr = useRef<AimTokenInfo[]>(turns);
     // need ref of setInterval to cancel it
@@ -32,11 +34,9 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
 
     useEffect(() => {
         turnInterval.current = setInterval(() => {
-             
-            // TODO: aimtoken does not seem to update the way I think it does - expression is true even when clicked
-            if (!aimToken.clicked) { 
-                const index: number = turnCount.current;
-                const aimGameUpdate: AimGameActionDto = { matchId, index, timeTaken: null };
+            // use clicked ref instead of state - state update is too slow, clicking write before the next setInterval tick results in clicked bool still being false
+            if (!clicked.current) { 
+                const aimGameUpdate: AimGameActionDto = { matchId, timeTaken: null };
                 connection.send('aimAction', aimGameUpdate);
             }
 
@@ -56,7 +56,8 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
             // move on to next token
             turnCount.current++; 
             const currentAimToken = turns[turnCount.current]
-
+            clicked.current = false;
+            
             console.log(`interval ${turnCount.current}`);
 
             setAimToken(
@@ -77,9 +78,12 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
 
     // callback invoked by the token when clicked or time has run out
     const clickHandler = () => {
-        if (aimToken.clicked) {
+        // use ref clicked - state clicked is not updated instantly
+        if (clicked.current) {
             return;
         }
+        
+        clicked.current = true;
 
         setAimToken(
             { 
@@ -91,9 +95,8 @@ const AimTokenRenderer: React.FC<AimTokenRendererProps> = ({ matchConnection, tu
             }
         );
 
-        const index = turnCount.current;
         const timeTaken = Date.now() - timeOfRender;
-        const aimGameUpdate: AimGameActionDto = { matchId, timeTaken, index };
+        const aimGameUpdate: AimGameActionDto = { matchId, timeTaken };
 
         connection.send('aimAction', aimGameUpdate);
         console.log(`render click handler, time ${timeTaken}`);
